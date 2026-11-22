@@ -102,7 +102,7 @@ function init(el: HTMLElement) {
 
     el.innerHTML = `
       <div class="bar">
-        <div class="seg" role="tablist" aria-label="Mode">${(['wedding', 'classroom', 'event'] as Mode[]).map((m) => `<button role="tab" aria-selected="${m === chart.mode}" data-mode="${m}">${MODE_LABEL[m]}</button>`).join('')}</div>
+        <div class="seg" role="group" aria-label="Mode">${(['wedding', 'classroom', 'event'] as Mode[]).map((m) => `<button aria-pressed="${m === chart.mode}" data-mode="${m}">${MODE_LABEL[m]}</button>`).join('')}</div>
         <input id="title" value="${e(chart.title)}" placeholder="Chart title" aria-label="Chart title">
         <button class="btn primary" id="auto">Auto-arrange</button>
         ${chart.mode === 'classroom' ? '<button class="btn" id="shuffle">Random shuffle</button>' : ''}
@@ -112,8 +112,8 @@ function init(el: HTMLElement) {
       <p class="stats">${chart.guests.length} ${person}s · ${chart.tables.length} ${chart.mode === 'classroom' ? 'desks/tables' : 'tables'} · ${seats} seats · ${un.length} not seated${selected ? ' · <b>Tap a table to seat the selected person</b>' : ''}</p>
       ${conflicts.length || warnings.length ? `<div class="warn" role="status"><b>${conflicts.length} conflict${conflicts.length === 1 ? '' : 's'}</b><ul>${[...warnings, ...conflicts.map((c) => c.message)].slice(0, 8).map((m) => `<li>${e(m)}</li>`).join('')}</ul></div>` : ''}
       <div class="tool">
-        <aside class="side"><div class="seg small">${(['guests', 'tables', 'rules'] as const).map((p) => `<button data-panel="${p}" aria-selected="${panel === p}">${p === 'guests' ? PERSON[chart.mode][0].toUpperCase() + PERSON[chart.mode].slice(1) + 's' : p[0].toUpperCase() + p.slice(1)}</button>`).join('')}</div>${panelHtml}</aside>
-        <div class="main"><div class="seg small">${([['plan', 'Floor plan'], ['tables', 'By table'], ['az', 'A–Z find your seat']] as const).map(([v, l]) => `<button data-view="${v}" aria-selected="${view === v}">${l}</button>`).join('')}</div>${viewHtml}</div>
+        <aside class="side"><div class="seg small">${(['guests', 'tables', 'rules'] as const).map((p) => `<button data-panel="${p}" aria-pressed="${panel === p}">${p === 'guests' ? PERSON[chart.mode][0].toUpperCase() + PERSON[chart.mode].slice(1) + 's' : p[0].toUpperCase() + p.slice(1)}</button>`).join('')}</div>${panelHtml}</aside>
+        <div class="main"><div class="seg small">${([['plan', 'Floor plan'], ['tables', 'By table'], ['az', 'A–Z find your seat']] as const).map(([v, l]) => `<button data-view="${v}" aria-pressed="${view === v}">${l}</button>`).join('')}</div>${viewHtml}</div>
       </div>
       <div class="bar exp"><span>Export:</span><button class="btn" id="pdf">PDF</button><button class="btn" id="png">PNG</button><button class="btn ghost" id="csvout">Caterer CSV</button><button class="btn ghost" id="json">Backup (.json)</button><label class="btn ghost file">Restore<input type="file" id="restore" accept=".json,application/json" hidden></label><button class="btn ghost" id="reset">New chart</button></div>
       ${paidPanel()}

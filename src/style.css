@@ -16,7 +16,7 @@ textarea{width:100%;resize:vertical}
 .btn.ghost{background:transparent}.btn:disabled{opacity:.45;cursor:default}
 .seg{display:inline-flex;border:1px solid var(--bd);border-radius:9px;overflow:hidden;background:#fff}
 .seg button{font:inherit;border:0;background:none;padding:6px 12px;cursor:pointer;min-height:36px}
-.seg button[aria-selected=true]{background:var(--acc2);color:#4c1d95;font-weight:600}
+.seg button[aria-pressed=true]{background:var(--acc2);color:#4c1d95;font-weight:600}
 .seg.small{margin-bottom:8px}
 .stats{font-size:.9rem;color:var(--mut);margin:6px 0}
 .warn{border:1px solid #fecaca;background:#fef2f2;border-radius:8px;padding:6px 10px;font-size:.9rem;margin-bottom:8px}.warn ul{margin:4px 0 0;padding-left:18px}
