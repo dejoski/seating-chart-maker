@@ -7,8 +7,6 @@ import { loadChart, saveChart, backupJson, restoreJson } from './lib/storage';
 import { escapeHtml as e, sortName, toCsv } from './lib/text';
 import { consumeUnlockParam } from './lib/unlock';
 
-const root = document.getElementById('app');
-if (root) init(root);
 
 function download(name: string, data: BlobPart, type: string) {
   const url = URL.createObjectURL(new Blob([data], { type }));
@@ -253,3 +251,6 @@ function init(el: HTMLElement) {
   saveChart(chart);
   (window as unknown as { __scm: unknown }).__scm = { get chart() { return chart; } };
 }
+
+const root = document.getElementById("app");
+if (root) init(root);
