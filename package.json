@@ -6,7 +6,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:build": "node scripts/check-build.mjs",
+    "check": "npm test && npm run build && npm run check:build"
   },
   "keywords": [],
   "author": "",

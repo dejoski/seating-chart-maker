@@ -1,0 +1,5 @@
+# Cloudflare Pages config (static site, no Functions yet).
+# Build: npm run build  (BASE_PATH=/ and SITE_URL=https://<your-domain>)  Output: dist
+name = "seating-chart-maker"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-11-01"

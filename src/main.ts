@@ -5,7 +5,9 @@ import { arrange, findConflicts } from './lib/arrange';
 import { classroomLayout, ClassroomKind, eventLayout, nextSpot, roomSize, tableBox, weddingLayout } from './lib/layouts';
 import { loadChart, saveChart, backupJson, restoreJson } from './lib/storage';
 import { escapeHtml as e, sortName, toCsv } from './lib/text';
-import { consumeUnlockParam } from './lib/unlock';
+import { consumeUnlockParam, isUnlocked } from './lib/unlock';
+import { PRINT_KIT_LINK, TEACHER_PACK_LINK, PRINT_KIT_PRICE, TEACHER_PACK_PRICE } from './config';
+import { DESIGNS } from './lib/printkit';
 
 
 function download(name: string, data: BlobPart, type: string) {
@@ -36,13 +38,13 @@ function init(el: HTMLElement) {
   const startMode = (el.dataset.mode as Mode) || 'wedding';
   let chart: Chart = loadChart(startMode) ?? demo(startMode);
   let view: 'plan' | 'tables' | 'az' = 'plan';
-  let panel: 'guests' | 'tables' | 'rules' = 'guests';
+  let panel: 'guests' | 'tables' | 'rules' = (el.dataset.panel as 'rules') || 'guests';
   let selected: string | null = null;
   let warnings: string[] = [];
   const undo: string[] = [];
   const apartRadius = () => (chart.mode === 'classroom' ? 200 : 0);
 
-  consumeUnlockParam().catch(() => {});
+  consumeUnlockParam().then((p) => { if (p) render(); }).catch(() => {});
 
   const commit = (fn: () => void) => {
     undo.push(JSON.stringify(chart)); if (undo.length > 50) undo.shift();
@@ -114,15 +116,33 @@ function init(el: HTMLElement) {
         <div class="main"><div class="seg small">${([['plan', 'Floor plan'], ['tables', 'By table'], ['az', 'A–Z find your seat']] as const).map(([v, l]) => `<button data-view="${v}" aria-selected="${view === v}">${l}</button>`).join('')}</div>${viewHtml}</div>
       </div>
       <div class="bar exp"><span>Export:</span><button class="btn" id="pdf">PDF</button><button class="btn" id="png">PNG</button><button class="btn ghost" id="csvout">Caterer CSV</button><button class="btn ghost" id="json">Backup (.json)</button><label class="btn ghost file">Restore<input type="file" id="restore" accept=".json,application/json" hidden></label><button class="btn ghost" id="reset">New chart</button></div>
+      ${paidPanel()}
       <p class="privacy">🔒 Your list never leaves this device: everything is saved in your browser (localStorage). No sign-up, no upload.</p>`;
+  }
+
+  function paidPanel(): string {
+    let out = '';
+    if (isUnlocked('printkit')) {
+      out += `<div class="paid"><b>Print Kit</b> <select id="kSize" aria-label="Sign size"><option value="24x36">24×36 in</option><option value="18x24">18×24 in</option><option value="11x17">11×17 in</option></select>
+        <select id="kDesign" aria-label="Design">${DESIGNS.map((d, i) => `<option value="${i}">${e(d.name)}</option>`).join('')}</select>
+        <select id="kOrder" aria-label="Order"><option value="alpha">A–Z</option><option value="table">By table</option></select>
+        <button class="btn" data-kit="sign">Seating sign</button><button class="btn" data-kit="escort">Escort cards</button><button class="btn" data-kit="numbers">Table numbers</button><button class="btn" data-kit="caterer">Caterer sheet</button></div>`;
+    } else if (PRINT_KIT_LINK) {
+      out += `<div class="paid"><b>Print Kit ${PRINT_KIT_PRICE}</b>: print-shop-ready seating sign (24×36, 18×24, 11×17; 6 designs, no footer), escort cards, table numbers and a caterer sheet. <a class="btn primary" href="${e(PRINT_KIT_LINK)}" rel="nofollow noopener">Get the Print Kit</a></div>`;
+    }
+    if (chart.mode === 'classroom') {
+      if (isUnlocked('teacher')) out += `<div class="paid"><b>Teacher Pack</b> <button class="btn" data-kit="tents">Name tents</button><button class="btn" data-kit="subplan">Sub plan</button></div>`;
+      else if (TEACHER_PACK_LINK) out += `<div class="paid"><b>Teacher Pack ${TEACHER_PACK_PRICE}</b>: name tents and a substitute plan PDF. <a class="btn primary" href="${e(TEACHER_PACK_LINK)}" rel="nofollow noopener">Get the Teacher Pack</a></div>`;
+    }
+    return out;
   }
 
   function editGuest(g: Guest) {
     return `<div class="edit"><b>Edit</b> <input data-gf="name" value="${e(g.name)}" aria-label="Name"><input data-gf="group" value="${e(g.group)}" placeholder="Group" aria-label="Group"><input data-gf="meal" value="${e(g.meal)}" placeholder="Meal" aria-label="Meal"><input data-gf="notes" value="${e(g.notes)}" placeholder="Notes" aria-label="Notes"><button class="btn ghost" id="gdel">Delete</button></div>`;
   }
 
-  function applyLayout(k: string) {
-    const n = Math.max(chart.guests.length, 1);
+  function applyLayout(k: string, min = 0) {
+    const n = Math.max(chart.guests.length, min, 1);
     commit(() => {
       chart.tables = k in { rows: 1, pairs: 1, pods: 1, ushape: 1 } ? classroomLayout(k as ClassroomKind, n)
         : k === 'round10' ? weddingLayout(n, 10, { head: chart.mode === 'wedding' ? 'sweetheart' : 'none' })
@@ -143,6 +163,19 @@ function init(el: HTMLElement) {
     if (d.panel) { panel = d.panel as typeof panel; render(); return; }
     if (d.view) { view = d.view as typeof view; render(); return; }
     if (d.layout) return applyLayout(d.layout);
+    if (d.kit) {
+      const k = await import('./lib/printkit');
+      const v = (id: string) => el.querySelector<HTMLSelectElement>(id)?.value ?? '';
+      const design = Number(v('#kDesign')) || 0;
+      const run: Record<string, () => Promise<Uint8Array>> = {
+        sign: () => k.seatingSign(chart, { size: (v('#kSize') || '24x36') as never, design, order: v('#kOrder') === 'table' ? 'table' : 'alpha' }),
+        escort: () => k.escortCards(chart, design), numbers: () => k.tableNumbers(chart, design), caterer: () => k.catererSheet(chart),
+        tents: () => k.nameTents(chart, design), subplan: () => k.subPlan(chart),
+      };
+      if ((d.kit === 'tents' || d.kit === 'subplan') ? !isUnlocked('teacher') : !isUnlocked('printkit')) return;
+      download(fname(d.kit + '.pdf').replace('.pdf.pdf', '.pdf'), (await run[d.kit]()) as BlobPart, 'application/pdf');
+      return;
+    }
     if (d.lock) { const id = d.lock; return commit(() => { chart.locked = chart.locked.includes(id) ? chart.locked.filter((x) => x !== id) : [...chart.locked, id]; }); }
     if (d.unseat) return seatGuest(d.unseat, null);
     if (d.tdel) { const id = d.tdel; return commit(() => { chart.tables = chart.tables.filter((x) => x.id !== id); for (const g of Object.keys(chart.seat)) if (chart.seat[g] === id) delete chart.seat[g]; }); }
@@ -187,7 +220,7 @@ function init(el: HTMLElement) {
       case 'json': return download(fname('json'), backupJson(chart), 'application/json');
     }
   });
-  const fname = (ext: string) => `${(chart.title || 'seating-chart').replace(/[^\w-]+/g, '-').toLowerCase()}.${ext}`;
+  const fname = (ext: string) => `${(chart.title || 'seating-chart').replace(/[^\w-]+/g, '-').toLowerCase()}${ext.includes('.') ? '-' : '.'}${ext}`;
 
   el.addEventListener('change', async (ev) => {
     const t = ev.target as HTMLInputElement;
@@ -245,6 +278,19 @@ function init(el: HTMLElement) {
       }
     };
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  });
+
+  // template buttons in page content (outside the tool)
+  document.addEventListener('click', (ev) => {
+    const b = (ev.target as HTMLElement).closest('[data-template]') as HTMLElement | null;
+    if (!b || el.contains(b)) return;
+    const spec = b.dataset.template!;
+    if (spec === 'csv') return download('seating-chart-template.csv', CSV_TEMPLATE, 'text/csv');
+    const [m, count, layout] = spec.split(':');
+    if (m !== chart.mode) { saveChart(chart); chart = loadChart(m as Mode) ?? emptyChart(m as Mode); undo.length = 0; warnings = []; }
+    panel = 'tables'; view = 'plan';
+    applyLayout(layout, Number(count));
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
   render();

@@ -1,0 +1,39 @@
+<article class="content">
+  <h2>The rules you can set</h2>
+  <ul>
+    <li><b>Keep together:</b> the two people always share a table. Chains work too: if A is with B and B is with C, all three sit together.</li>
+    <li><b>Keep apart:</b> the two people never share a table. In classroom mode they also won’t sit at neighbouring desks or pods.</li>
+    <li><b>Linked parties:</b> couples (“Alex &amp; Sam Lee”) and plus-ones (“Jordan Park +1”) are kept together automatically, without a rule.</li>
+    <li><b>Locked seats:</b> click the lock on anyone already placed and auto-arrange will never move them.</li>
+    <li><b>Groups (soft):</b> people with the same Group value are placed near each other when there is room. This is a preference, not a rule.</li>
+  </ul>
+  <p>The rules tab is open in the tool above. Pick two names, choose “keep apart from” or “keep together with”, and click Add rule.</p>
+  <h2>How auto-arrange works</h2>
+  <ol>
+    <li>Links everyone who must sit together (parties and keep-together rules) into one unit.</li>
+    <li>Places locked guests first, then the units with the most keep-apart rules, then the biggest units, because those are hardest to fit.</li>
+    <li>For each unit, picks a table with enough free seats and no keep-apart clash, preferring tables with the same group and filling tables evenly.</li>
+    <li>Repeats with many different orders and keeps the arrangement with the fewest broken rules.</li>
+  </ol>
+  <p>It runs entirely in your browser in a fraction of a second for a typical wedding or class.</p>
+  <h2>When rules conflict</h2>
+  <p>Some rule sets can’t all be met. The tool tells you which, in red, instead of silently ignoring one:</p>
+  <ul>
+    <li><b>Contradictions:</b> two people linked as a couple or keep-together but also marked keep-apart.</li>
+    <li><b>Group too big:</b> a linked group with more people than the biggest table. It gets split across tables, with a warning.</li>
+    <li><b>Not enough seats:</b> more people than seats. Add a table or raise seat counts.</li>
+    <li><b>Too many keep-apart rules for too few tables:</b> for example five people who must all be apart, but only four tables.</li>
+  </ul>
+  <p>Manual moves are checked too: if you drag someone next to a person they should avoid, both names and tables turn red.</p>
+  <section class="qa">
+    <h2>Questions about rules</h2>
+    <h3>Is there a limit on the number of rules?</h3>
+    <p>No fixed limit. More keep-apart rules mean fewer valid arrangements, so the warnings will tell you if the set becomes impossible.</p>
+    <h3>Can I keep someone at a specific table?</h3>
+    <p>Yes: drag them to that table and click the lock. Locks always win over auto-arrange.</p>
+    <h3>Does auto-arrange change seats I placed by hand?</h3>
+    <p>It rebuilds the whole chart except locked guests. Lock anyone you placed by hand that you want to keep, or use Undo to go back.</p>
+    <h3>Why did two people from the same group end up apart?</h3>
+    <p>Groups are a soft preference. A hard rule, a lock or a full table can outweigh them. Add a keep-together rule if they must share a table.</p>
+  </section>
+</article>

@@ -2,6 +2,8 @@ export function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
+const EXTRA: Record<string, string> = { 'Ł': 'L', 'ł': 'l', 'Đ': 'D', 'đ': 'd', 'ı': 'i', 'Œ': 'OE', 'œ': 'oe', 'Ħ': 'H', 'ħ': 'h' };
+
 /** Make text safe for PDF standard fonts (WinAnsi). Strips accents only when needed. */
 export function pdfSafe(s: string): string {
   let out = '';
@@ -12,6 +14,7 @@ export function pdfSafe(s: string): string {
     else if (ch === '\u2019' || ch === '\u2018') out += "'";
     else if (ch === '\u201c' || ch === '\u201d') out += '"';
     else if (ch === '\u2013' || ch === '\u2014') out += '-';
+    else if (EXTRA[ch]) out += EXTRA[ch];
     else {
       const base = ch.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
       out += /^[\x20-\x7e]+$/.test(base) ? base : '?';

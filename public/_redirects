@@ -1,0 +1,2 @@
+# Old GitHub Pages project paths -> root (when served from a root domain on Cloudflare Pages)
+/seating-chart-maker/* /:splat 301

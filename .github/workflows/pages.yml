@@ -20,8 +20,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm test --if-present -- --passWithNoTests
+      - run: npm test
       - run: npm run build
+        env:
+          BASE_PATH: /seating-chart-maker/
+          SITE_URL: https://dejoski.github.io
+      - run: npm run check:build
         env:
           BASE_PATH: /seating-chart-maker/
           SITE_URL: https://dejoski.github.io

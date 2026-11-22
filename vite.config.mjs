@@ -4,7 +4,16 @@ import { readFileSync } from 'node:fs';
 import { PAGES, SITE_URL, BASE, SITE_NAME } from './site.config.mjs';
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-const partial = (n) => readFileSync(resolve(__dirname, 'src/partials', n + '.html'), 'utf8');
+const content = (n) => readFileSync(resolve(__dirname, 'src/content', n + '.html'), 'utf8');
+const navPages = PAGES.filter((p) => !p.noindex && !p.noTool);
+const header = () => `<header class="top site">
+  <a class="brand" href="%BASE%"><img src="%BASE%favicon.svg" width="24" height="24" alt="">Seating Chart Maker</a>
+  <nav aria-label="Main">${navPages.map((p) => `<a href="%BASE%${p.path}">${p.nav}</a>`).join('')}</nav>
+</header>`;
+const footer = () => `<footer class="foot site">
+  <nav aria-label="Footer">${navPages.map((p) => `<a href="%BASE%${p.path}">${esc(p.h1)}</a>`).join('')}<a href="%BASE%privacy/">Privacy</a></nav>
+  <p>Free, no sign-up, no ads. Your list stays in your browser and is never uploaded.</p>
+</footer>`;
 
 function pageFor(filename) {
   const rel = filename.replace(resolve(__dirname) + '/', '').replace(/\\/g, '/');
@@ -19,6 +28,7 @@ function head(p) {
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   };
   return [
+    '<meta name="google-site-verification" content="Yl1hE2g8ab88VS_ZLB6txJ6mMufPpBMz4c52mrTiiw4" />',
     `<title>${esc(p.title)}</title>`,
     `<meta name="description" content="${esc(p.description)}">`,
     p.noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" href="${url}">`,
@@ -41,9 +51,12 @@ const site = {
       if (!p) throw new Error('No PAGES entry for ' + ctx.filename);
       return html
         .replace('<!--@head-->', head(p))
-        .replace('<!--@header-->', partial('header'))
-        .replace('<!--@footer-->', partial('footer'))
-        .replace('<!--@h1-->', `<h1>${esc(p.h1)}</h1>`)
+        .replace('<!--@header-->', header())
+        .replace('<!--@footer-->', footer())
+        .replace('<!--@h1-->', `<h1>${esc(p.h1)}</h1>` + (p.lede ? `\n      <p class="lede">${esc(p.lede)}</p>` : ''))
+        .replace('<!--@tool-->', p.noTool ? '' : `<div id="app" data-mode="${p.mode || 'wedding'}"${p.panel ? ` data-panel="${p.panel}"` : ''}><noscript>This seating chart tool needs JavaScript turned on.</noscript><p class="loading">Loading the seating chart tool…</p></div>`)
+        .replace('<!--@content-->', content(p.content))
+        .replace('<!--@script-->', p.noTool && !p.script ? '' : `<script type="module" src="/src/${p.script || 'main'}.ts"></script>`)
         .replace(/%MODE%/g, p.mode || 'wedding')
         .replace(/%BASE%/g, BASE);
     },

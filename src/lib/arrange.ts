@@ -196,7 +196,7 @@ export function arrange(chart: Chart, opts: ArrangeOptions = {}): ArrangeResult 
         const otherGroup = g.length ? at.get(t.id)!.filter((o) => group.get(o) && !g.includes(group.get(o))).length : 0;
         let score = c * 1000;
         if (opts.shuffle) score += r() * 50;
-        else score += free * 2 - sameGroup * 6 + otherGroup * 1.5 + r() * 0.5;
+        else score += free * 2 - sameGroup * 6 + otherGroup * 4 + r() * 0.5;
         if (score < bestScore) { bestScore = score; best = t; }
       }
       violations += clashes(u.ids, best!.id);
