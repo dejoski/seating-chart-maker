@@ -72,6 +72,10 @@ c = await chart(); ok('classroom page opens classroom mode', c.mode === 'classro
 const before = JSON.stringify(c.seat); await p.click('#shuffle'); await p.click('#shuffle'); c = await chart();
 ok('random shuffle seats everyone', Object.keys(c.seat).length === c.guests.length && JSON.stringify(c.seat) !== before);
 
+// Banquet page: event mode
+await p.goto(base + 'banquet-seating-chart/', { waitUntil: 'networkidle0' }); await p.waitForSelector('#app .tbl');
+c = await chart(); ok('banquet page opens event mode', c.mode === 'event');
+
 // Template page: load a template
 await p.goto(base + 'seating-chart-template/', { waitUntil: 'networkidle0' }); await p.waitForSelector('#app .tbl');
 await p.click('[data-template="wedding:150:round10"]'); c = await chart();
