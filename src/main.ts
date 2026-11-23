@@ -5,8 +5,9 @@ import { arrange, findConflicts } from './lib/arrange';
 import { classroomLayout, ClassroomKind, eventLayout, nextSpot, roomSize, tableBox, weddingLayout } from './lib/layouts';
 import { loadChart, saveChart, backupJson, restoreJson } from './lib/storage';
 import { escapeHtml as e, sortName, toCsv } from './lib/text';
-import { consumeUnlockParam, isUnlocked } from './lib/unlock';
-import { PRINT_KIT_LINK, TEACHER_PACK_LINK, PRINT_KIT_PRICE, TEACHER_PACK_PRICE } from './config';
+import { consumeUnlockParam, isUnlocked, setUnlocked, Product } from './lib/unlock';
+import { looksLikeEmail, sendProductEvent } from './lib/events';
+import { PRINT_KIT_LINK, TEACHER_PACK_LINK, PRINT_KIT_PRICE, TEACHER_PACK_PRICE, FREE_GIVEAWAY } from './config';
 import { DESIGNS } from './lib/printkit';
 
 
@@ -43,6 +44,9 @@ function init(el: HTMLElement) {
   let warnings: string[] = [];
   const undo: string[] = [];
   const apartRadius = () => (chart.mode === 'classroom' ? 200 : 0);
+  // Free giveaway: which add-on's "Buy" was clicked (shows the payments-open-soon note) and notify status text.
+  const buyNotice: Partial<Record<Product, boolean>> = {};
+  const notifyStatus: Partial<Record<Product, string>> = {};
 
   consumeUnlockParam().then((p) => { if (p) render(); }).catch(() => {});
 
@@ -120,19 +124,43 @@ function init(el: HTMLElement) {
       <p class="privacy">🔒 Your list never leaves this device: everything is saved in your browser (localStorage). No sign-up, no upload.</p>`;
   }
 
+  const OFFER: Record<Product, { name: string; price: string; blurb: string }> = {
+    printkit: { name: 'Print Kit', price: PRINT_KIT_PRICE, blurb: 'print-shop-ready seating sign (24×36, 18×24, 11×17; 6 designs, no footer), escort cards, table numbers and a caterer sheet.' },
+    teacher: { name: 'Teacher Pack', price: TEACHER_PACK_PRICE, blurb: 'name tents and a substitute plan PDF.' },
+  };
+
+  // "Get it free" + "Buy $N" (willingness-to-pay test; no charge, no checkout).
+  function freeOffer(p: Product): string {
+    const o = OFFER[p];
+    return `<div class="paid offer" data-offer="${p}"><b>${o.name}</b>: ${o.blurb} Free for now.
+      <label class="em">Email (optional) <input type="email" id="em-${p}" autocomplete="email" placeholder="you@example.com"></label>
+      <button class="btn primary" data-free="${p}">Get it free</button><button class="btn" data-buy="${p}">Buy ${o.price}</button></div>`;
+  }
+
+  function notice(p: Product): string {
+    if (!buyNotice[p]) return '';
+    return `<div class="paid notice" role="status" data-notice="${p}"><b>Payments open soon. Here's your free copy now.</b> The ${OFFER[p].name} is unlocked below.
+      <form data-notify="${p}" class="row wrap"><label class="em">Notify me when payments open (optional) <input type="email" required autocomplete="email" placeholder="you@example.com"></label><button class="btn" type="submit">Notify me</button></form>
+      <span class="muted" aria-live="polite">${e(notifyStatus[p] || '')}</span></div>`;
+  }
+
   function paidPanel(): string {
     let out = '';
     if (isUnlocked('printkit')) {
+      out += notice('printkit');
       out += `<div class="paid"><b>Print Kit</b> <select id="kSize" aria-label="Sign size"><option value="24x36">24×36 in</option><option value="18x24">18×24 in</option><option value="11x17">11×17 in</option></select>
         <select id="kDesign" aria-label="Design">${DESIGNS.map((d, i) => `<option value="${i}">${e(d.name)}</option>`).join('')}</select>
         <select id="kOrder" aria-label="Order"><option value="alpha">A–Z</option><option value="table">By table</option></select>
         <button class="btn" data-kit="sign">Seating sign</button><button class="btn" data-kit="escort">Escort cards</button><button class="btn" data-kit="numbers">Table numbers</button><button class="btn" data-kit="caterer">Caterer sheet</button></div>`;
     } else if (PRINT_KIT_LINK) {
       out += `<div class="paid"><b>Print Kit ${PRINT_KIT_PRICE}</b>: print-shop-ready seating sign (24×36, 18×24, 11×17; 6 designs, no footer), escort cards, table numbers and a caterer sheet. <a class="btn primary" href="${e(PRINT_KIT_LINK)}" rel="nofollow noopener">Get the Print Kit</a></div>`;
+    } else if (FREE_GIVEAWAY) {
+      out += freeOffer('printkit');
     }
     if (chart.mode === 'classroom') {
-      if (isUnlocked('teacher')) out += `<div class="paid"><b>Teacher Pack</b> <button class="btn" data-kit="tents">Name tents</button><button class="btn" data-kit="subplan">Sub plan</button></div>`;
+      if (isUnlocked('teacher')) out += notice('teacher') + `<div class="paid"><b>Teacher Pack</b> <button class="btn" data-kit="tents">Name tents</button><button class="btn" data-kit="subplan">Sub plan</button></div>`;
       else if (TEACHER_PACK_LINK) out += `<div class="paid"><b>Teacher Pack ${TEACHER_PACK_PRICE}</b>: name tents and a substitute plan PDF. <a class="btn primary" href="${e(TEACHER_PACK_LINK)}" rel="nofollow noopener">Get the Teacher Pack</a></div>`;
+      else if (FREE_GIVEAWAY) out += freeOffer('teacher');
     }
     return out;
   }
@@ -174,6 +202,21 @@ function init(el: HTMLElement) {
       };
       if ((d.kit === 'tents' || d.kit === 'subplan') ? !isUnlocked('teacher') : !isUnlocked('printkit')) return;
       download(fname(d.kit + '.pdf').replace('.pdf.pdf', '.pdf'), (await run[d.kit]()) as BlobPart, 'application/pdf');
+      return;
+    }
+    if (d.free || d.buy) {
+      const p = (d.free || d.buy) as Product;
+      if (p !== 'printkit' && p !== 'teacher') return;
+      if (d.free) {
+        const email = el.querySelector<HTMLInputElement>(`#em-${p}`)?.value.trim() || '';
+        void sendProductEvent(p, 'free_download');
+        if (email && looksLikeEmail(email)) void sendProductEvent(p, 'notify_email', email);
+      } else {
+        void sendProductEvent(p, 'buy_click');
+        buyNotice[p] = true;
+      }
+      setUnlocked(p);
+      render();
       return;
     }
     if (d.lock) { const id = d.lock; return commit(() => { chart.locked = chart.locked.includes(id) ? chart.locked.filter((x) => x !== id) : [...chart.locked, id]; }); }
@@ -221,6 +264,20 @@ function init(el: HTMLElement) {
     }
   });
   const fname = (ext: string) => `${(chart.title || 'seating-chart').replace(/[^\w-]+/g, '-').toLowerCase()}${ext.includes('.') ? '-' : '.'}${ext}`;
+
+  el.addEventListener('submit', (ev) => {
+    const f = (ev.target as HTMLElement).closest('form[data-notify]') as HTMLFormElement | null;
+    if (!f) return;
+    ev.preventDefault();
+    const p = f.dataset.notify as Product;
+    const email = f.querySelector('input')?.value.trim() || '';
+    if (!looksLikeEmail(email)) { notifyStatus[p] = 'That email does not look right. Your free copy is unlocked either way.'; render(); return; }
+    notifyStatus[p] = 'Saving…'; render();
+    void sendProductEvent(p, 'notify_email', email).then((ok) => {
+      notifyStatus[p] = ok ? "Thanks. You're on the list for when payments open." : 'Could not save that right now. Your free copy is unlocked either way.';
+      render();
+    });
+  });
 
   el.addEventListener('change', async (ev) => {
     const t = ev.target as HTMLInputElement;
