@@ -24,6 +24,7 @@ Live (GitHub Pages): https://dejoski.github.io/seating-chart-maker/
 | `/` | Free Seating Chart Maker – Drag, Drop & Print |
 | `/wedding-seating-chart/` | Wedding Seating Chart Maker (Free, Printable) |
 | `/classroom-seating-chart/` | Classroom Seating Chart Generator – Free |
+| `/banquet-seating-chart/` | Banquet Seating Chart Maker (Free, Printable) |
 | `/seating-chart-template/` | Seating Chart Templates – Round & Long Tables |
 | `/seating-chart-sign-size/` | Seating Chart Sign Size Guide (+ Free Maker) |
 | `/seating-chart-with-restrictions/` | Seating Chart Generator With Rules |
