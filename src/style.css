@@ -55,5 +55,6 @@ textarea{width:100%;resize:vertical}
 footer.foot{border-top:1px solid #eee;margin-top:40px;padding:16px 0;font-size:.85rem;color:var(--mut)}
 footer.foot nav{display:flex;gap:14px;flex-wrap:wrap}
 table.data{border-collapse:collapse;width:100%;font-size:.92rem}table.data td,table.data th{border:1px solid #e5e7eb;padding:6px 8px;text-align:left}
+.paid .em{display:inline-flex;gap:4px;align-items:center}.paid .em input{min-width:12em}.paid.notice{background:#f0fdf4;border-color:#bbf7d0}.paid.notice form{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0}
 .paid{margin-top:8px;padding:8px 10px;border:1px solid #ddd6fe;background:#faf5ff;border-radius:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:.9rem}
 .loading{color:var(--mut)}

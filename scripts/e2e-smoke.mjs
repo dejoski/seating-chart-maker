@@ -8,6 +8,16 @@ const b = await puppeteer.launch({ executablePath: process.env.CHROME || '/usr/b
 const p = await b.newPage(); await p.setViewport({ width: 1366, height: 1000 });
 p.on('dialog', (d) => d.accept());
 const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+// Product events are intercepted (never sent to production) and recorded for assertions.
+const events = [];
+await p.setRequestInterception(true);
+p.on('request', (r) => {
+  if (r.url().includes('/api/product-event')) {
+    if (r.method() === 'POST') { try { events.push(JSON.parse(r.postData() || '{}')); } catch { /* ignore */ } }
+    return r.respond({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: '{"ok":true,"outcome":"counted"}' });
+  }
+  r.continue();
+});
 const cdp = await p.createCDPSession(); await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dl });
 const ok = (name, cond) => { console.log((cond ? 'PASS ' : 'FAIL ') + name); if (!cond) process.exitCode = 1; };
 const chart = () => p.evaluate(() => window.__scm.chart);
@@ -62,7 +72,7 @@ await p.click('#pdf'); await p.click('#png'); await p.click('#csvout'); await p.
 await wait(2500);
 const files = fs.readdirSync(dl);
 ok('exports downloaded (pdf, png, csv, json): ' + files.join(' '), ['pdf', 'png', 'csv', 'json'].every((e) => files.some((f) => f.endsWith('.' + e) && fs.statSync(dl + '/' + f).size > 200)));
-ok('no Print Kit buy button while link empty', !(await p.$('.paid')));
+ok('free Print Kit offer shown (Get it free + Buy $14), no Stripe link', !!(await p.$('[data-free=printkit]')) && (await p.$eval('[data-buy=printkit]', (e) => e.textContent)).includes('Buy $14') && !(await p.content()).includes('buy.stripe.com'));
 await p.reload({ waitUntil: 'networkidle0' });
 ok('saved in localStorage across reload', (await chart()).guests.length === 18);
 
@@ -84,6 +94,32 @@ ok('template loads 150-seat layout', c.tables.reduce((s, t) => s + t.seats, 0) >
 // Restrictions page opens rules panel
 await p.goto(base + 'seating-chart-with-restrictions/', { waitUntil: 'networkidle0' }); await p.waitForSelector('#app');
 ok('restrictions page opens rules tab', !!(await p.$('#addr')));
+
+// Free giveaway + willingness-to-pay test
+const clearUnlocks = () => p.evaluate(() => { localStorage.removeItem('scm.unlock.printkit'); localStorage.removeItem('scm.unlock.teacher'); });
+await p.goto(base, { waitUntil: 'networkidle0' }); await clearUnlocks(); await p.reload({ waitUntil: 'networkidle0' }); await p.waitForSelector('[data-buy=printkit]');
+events.length = 0;
+await p.click('[data-buy=printkit]'); await wait(300);
+ok('Buy $14 shows payments-open-soon note', (await p.$eval('[data-notice=printkit]', (e) => e.textContent)).includes("Payments open soon. Here's your free copy now."));
+ok('Buy $14 unlocks the free Print Kit', !!(await p.$('[data-kit=sign]')));
+ok('Buy $14 logs buy_click for print-kit', events.some((x) => x.event === 'buy_click' && x.product === 'print-kit'));
+await p.type('[data-notify=printkit] input', 'e2e@example.com'); await p.click('[data-notify=printkit] button'); await wait(500);
+ok('notify-me email sent as notify_email', events.some((x) => x.event === 'notify_email' && x.email === 'e2e@example.com'));
+ok('notify-me thanks shown', (await p.$eval('[data-notice=printkit]', (e) => e.textContent)).includes('on the list'));
+await p.click('[data-kit=sign]'); await wait(2500);
+ok('free Print Kit sign PDF downloads', fs.readdirSync(dl).some((f) => /sign/.test(f) && f.endsWith('.pdf')));
+await clearUnlocks(); await p.reload({ waitUntil: 'networkidle0' }); await p.waitForSelector('[data-free=printkit]');
+events.length = 0;
+await p.click('[data-free=printkit]'); await wait(300);
+ok('Get it free unlocks Print Kit without email', !!(await p.$('[data-kit=sign]')) && !(await p.$('[data-notice=printkit]')));
+ok('Get it free logs free_download only', events.length === 1 && events[0].event === 'free_download' && events[0].product === 'print-kit');
+await p.goto(base + 'classroom-seating-chart/', { waitUntil: 'networkidle0' }); await clearUnlocks(); await p.reload({ waitUntil: 'networkidle0' }); await p.waitForSelector('[data-buy=teacher]');
+ok('Teacher Pack offer shows Buy $7', (await p.$eval('[data-buy=teacher]', (e) => e.textContent)).includes('Buy $7'));
+events.length = 0;
+await p.type('#em-teacher', 'teacher@example.com'); await p.click('[data-free=teacher]'); await wait(300);
+ok('Teacher Pack Get it free unlocks name tents', !!(await p.$('[data-kit=tents]')));
+ok('Get it free with email logs free_download + notify_email', events.some((x) => x.event === 'free_download' && x.product === 'teacher-pack') && events.some((x) => x.event === 'notify_email' && x.email === 'teacher@example.com'));
+await clearUnlocks();
 
 // Unlock flow (v0)
 if (token) {

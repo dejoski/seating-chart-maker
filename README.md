@@ -77,7 +77,8 @@ The repo is ready for Cloudflare Pages: `wrangler.toml` sets `pages_build_output
 
 All settings are in `src/config.ts`.
 
-- `PRINT_KIT_LINK` and `TEACHER_PACK_LINK` are Stripe Payment Link URLs. **While a link is empty, no buy button or paid panel is shown.**
+- `PRINT_KIT_LINK` and `TEACHER_PACK_LINK` are Stripe Payment Link URLs. While a link is empty and `FREE_GIVEAWAY` is false, no buy button or paid panel is shown.
+- `FREE_GIVEAWAY` (2026-11-22, on): while a link is empty, each add-on shows **Get it free** (unlocks in this browser at once; email optional) and **Buy $14 / Buy $7**. Buy only logs a `buy_click` event and shows "Payments open soon. Here's your free copy now." with the free unlock and an optional notify-me email. No charge, no checkout. Events (`free_download`, `buy_click`, `notify_email`) go to `PRODUCT_EVENT_URL` (the osceolasodsolutions.top worker). Read aggregate counts with `curl -s https://osceolasodsolutions.top/api/product-events` (`totals.print-kit`, `totals.teacher-pack`). Set `FREE_GIVEAWAY = false` when the Payment Links go live.
 - `UNLOCK_HASHES` holds the SHA-256 of each product's secret unlock token. The plain tokens are not stored in this repo.
 
 To go live:

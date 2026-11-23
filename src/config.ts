@@ -10,6 +10,18 @@
 export const PRINT_KIT_LINK = '';
 export const TEACHER_PACK_LINK = '';
 
+/**
+ * Free giveaway + willingness-to-pay test (2026-11-22). While a *_LINK is empty and
+ * FREE_GIVEAWAY is true, each add-on shows "Get it free" (unlocks in this browser at once,
+ * email optional) and a "Buy" button that only logs a buy_click event and shows
+ * "Payments open soon. Here's your free copy now." with the free unlock and an optional
+ * notify-me email. No charge, no checkout. Events go to PRODUCT_EVENT_URL (aggregate counts:
+ * https://osceolasodsolutions.top/api/product-events). Set FREE_GIVEAWAY = false when the
+ * Payment Links go live.
+ */
+export const FREE_GIVEAWAY = true;
+export const PRODUCT_EVENT_URL = 'https://osceolasodsolutions.top/api/product-event';
+
 export const PRINT_KIT_PRICE = '$14';
 export const TEACHER_PACK_PRICE = '$7';
 
